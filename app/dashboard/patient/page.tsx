@@ -10,6 +10,7 @@ export default function PatientPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("id");
   const action = searchParams.get("action");
+
   const [status, setStatus] = useState<PatientStatus>("inactive");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -21,6 +22,7 @@ export default function PatientPage() {
     setValue,
     formState: { errors },
   } = useForm<Patient>();
+
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -33,10 +35,11 @@ export default function PatientPage() {
         .select("*")
         .eq("id", sessionId)
         .single();
+
       if (data) {
         reset(data as Patient);
         if (action === "edit") {
-          setStatus("inactive");
+          setStatus("inactive"); // บังคับให้แก้ได้
         } else {
           setStatus(data.status as PatientStatus);
         }
@@ -90,6 +93,7 @@ export default function PatientPage() {
     "block text-sm md:text-base font-medium text-slate-700 mb-1";
   const inputStyle =
     "w-full border border-slate-300 rounded px-3 py-2 text-sm md:text-base text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500";
+  const errorStyle = "text-red-500 text-xs mt-1 block";
 
   if (isLoading) {
     return (
@@ -172,7 +176,10 @@ export default function PatientPage() {
                   เบอร์โทรศัพท์ <span className="text-red-500">*</span>
                 </label>
                 <input
-                  {...register("phone", { required: true })}
+                  {...register("phone", {
+                    required: true,
+                    pattern: /^[0-9]{10}$/,
+                  })}
                   className={inputStyle}
                   placeholder="08x-xxx-xxxx"
                   readOnly
@@ -180,6 +187,11 @@ export default function PatientPage() {
                 <p className="text-xs text-slate-400 mt-1">
                   * เบอร์โทรศัพท์ใช้เป็นรหัสประจำตัว (ID) ไม่สามารถแก้ไขได้
                 </p>
+                {errors.phone && (
+                  <span className={errorStyle}>
+                    รูปแบบเบอร์โทรไม่ถูกต้อง (ต้องเป็นตัวเลข 10 หลัก)
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
@@ -193,9 +205,7 @@ export default function PatientPage() {
                     placeholder="ชื่อจริง"
                   />
                   {errors.first_name && (
-                    <span className="text-red-500 text-xs">
-                      กรุณากรอกข้อมูล
-                    </span>
+                    <span className={errorStyle}>กรุณากรอกข้อมูล</span>
                   )}
                 </div>
                 <div>
@@ -207,12 +217,17 @@ export default function PatientPage() {
                     className={inputStyle}
                     placeholder="นามสกุล"
                   />
+                  {errors.last_name && (
+                    <span className={errorStyle}>กรุณากรอกข้อมูล</span>
+                  )}
                 </div>
               </div>
+
               <div>
                 <label className={labelStyle}>ชื่อกลาง (ถ้ามี)</label>
                 <input {...register("middle_name")} className={inputStyle} />
               </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                 <div>
                   <label className={labelStyle}>
@@ -223,6 +238,9 @@ export default function PatientPage() {
                     {...register("dob", { required: true })}
                     className={inputStyle}
                   />
+                  {errors.dob && (
+                    <span className={errorStyle}>กรุณากรอกข้อมูล</span>
+                  )}
                 </div>
                 <div>
                   <label className={labelStyle}>
@@ -237,6 +255,9 @@ export default function PatientPage() {
                     <option value="หญิง">หญิง</option>
                     <option value="อื่นๆ">อื่นๆ</option>
                   </select>
+                  {errors.gender && (
+                    <span className={errorStyle}>กรุณาเลือกเพศ</span>
+                  )}
                 </div>
               </div>
 
@@ -268,11 +289,18 @@ export default function PatientPage() {
                 <label className={labelStyle}>อีเมล</label>
                 <input
                   type="email"
-                  {...register("email", { required: true })}
+                  {...register("email", {
+                    required: true,
+                    pattern: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  })}
                   className={inputStyle}
                   placeholder="name@example.com"
                 />
+                {errors.email && (
+                  <span className={errorStyle}>รูปแบบอีเมลไม่ถูกต้อง</span>
+                )}
               </div>
+
               <div>
                 <label className={labelStyle}>ที่อยู่</label>
                 <textarea
@@ -280,6 +308,9 @@ export default function PatientPage() {
                   className={inputStyle}
                   rows={3}
                 />
+                {errors.address && (
+                  <span className={errorStyle}>กรุณากรอกข้อมูล</span>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
@@ -294,14 +325,10 @@ export default function PatientPage() {
                   <label className={labelStyle}>สัญชาติ</label>
                   <input {...register("nationality")} className={inputStyle} />
                 </div>
+
                 <div>
-                  <label className={labelStyle}>
-                    ศาสนา <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    {...register("religion", { required: true })}
-                    className={inputStyle}
-                  >
+                  <label className={labelStyle}>ศาสนา (Optional)</label>
+                  <select {...register("religion")} className={inputStyle}>
                     <option value="">เลือกศาสนา...</option>
                     <option value="พุทธ">พุทธ</option>
                     <option value="คริสต์">คริสต์</option>

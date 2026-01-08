@@ -181,7 +181,7 @@ export default function MainPage() {
 
               {loginStep === "patient_auth" && (
                 <div className="space-y-6">
-                  <div className="space-y-3">
+                    <div className="space-y-3">
                     <label className="block text-sm font-bold text-slate-700">
                       เบอร์โทรศัพท์มือถือ
                     </label>
@@ -190,10 +190,10 @@ export default function MainPage() {
                       className="w-full border border-slate-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 text-lg tracking-wide"
                       placeholder="08x-xxx-xxxx"
                       value={phoneInput}
-                      onChange={(e) => setPhoneInput(e.target.value)}
+                      onChange={(e) => setPhoneInput(e.target.value.replace(/\D/g, ""))}
                       autoFocus
                     />
-                  </div>
+                    </div>
 
                   {errorMsg && (
                     <p className="text-red-500 text-sm bg-red-50 p-2 rounded text-center animate-pulse">
