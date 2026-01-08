@@ -18,5 +18,7 @@ export interface Patient {
   chronic_disease?: string; // โรคประจำตัว
   allergies?: string;       // สิ่งที่แพ้
   status: PatientStatus;
+  bloodtype?: string;
+  emergency_contact_phone?: string;
   updated_at: string;
 }

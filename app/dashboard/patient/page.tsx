@@ -38,8 +38,10 @@ export default function PatientPage() {
 
       if (data) {
         reset(data as Patient);
+
+        // Logic การล็อค/ปลดล็อคหน้าจอ
         if (action === "edit") {
-          setStatus("inactive"); // บังคับให้แก้ได้
+          setStatus("inactive");
         } else {
           setStatus(data.status as PatientStatus);
         }
@@ -125,9 +127,6 @@ export default function PatientPage() {
           <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">
             บันทึกข้อมูลสำเร็จ!
           </h2>
-          <p className="text-slate-500 mb-6">
-            ข้อมูลของคุณถูกส่งเข้าระบบแล้ว <br />
-          </p>
 
           <div className="bg-slate-50 rounded-lg p-3 mb-6 text-xs text-slate-400 font-mono">
             Patient ID: {sessionId}
@@ -259,6 +258,23 @@ export default function PatientPage() {
                     <span className={errorStyle}>กรุณาเลือกเพศ</span>
                   )}
                 </div>
+                <div>
+                  <label htmlFor="blood">กรุ๊ปเลือด</label>
+                  <select
+                    {...register("bloodtype")}
+                    className={inputStyle}
+                    id="blood"
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </div>
               </div>
 
               <div className="bg-red-50 p-3 sm:p-4 rounded border border-red-100 mb-6">
@@ -352,6 +368,20 @@ export default function PatientPage() {
                     {...register("emergency_contact_rel")}
                     className={inputStyle}
                     placeholder="ความสัมพันธ์"
+                  />
+                  <input
+                    {...register("emergency_contact_phone")}
+                    type="tel"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    className={inputStyle}
+                    placeholder="เบอร์โทรศัพท์ผู้ติดต่อ"
+                    onInput={(e) => {
+                      e.currentTarget.value = e.currentTarget.value.replace(
+                        /[^0-9]/g,
+                        ""
+                      );
+                    }}
                   />
                 </div>
               </div>

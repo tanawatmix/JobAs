@@ -231,6 +231,10 @@ export default function StaffPage() {
                     <p className="val-modal">{selectedPatient.gender}</p>
                   </div>
                   <div>
+                    <p className="label-modal">กรุ๊ปเลือด</p>
+                    <p className="val-modal">{selectedPatient.bloodtype || "-"}</p>
+                  </div>
+                  <div>
                     <p className="label-modal">สัญชาติ</p>
                     <p className="val-modal">
                       {selectedPatient.nationality || "-"}
@@ -288,6 +292,12 @@ export default function StaffPage() {
                       <p className="label-modal">ความสัมพันธ์</p>
                       <p className="val-modal">
                         {selectedPatient.emergency_contact_rel || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="label-modal">เบอร์โทรศัพท์</p>
+                      <p className="val-modal">
+                        {selectedPatient.emergency_contact_phone}
                       </p>
                     </div>
                   </div>

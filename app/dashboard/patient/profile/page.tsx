@@ -81,6 +81,7 @@ export default function PatientProfile() {
             />
             <InfoRow label="วันเกิด" value={patient.dob} />
             <InfoRow label="เพศ" value={patient.gender} />
+            <InfoRow label="กรุ๊ปเลือด" value={patient.bloodtype} />
             <InfoRow label="สัญชาติ" value={patient.nationality} />
             <InfoRow label="ศาสนา" value={patient.religion} />
             <InfoRow label="ภาษาที่ถนัด" value={patient.pref_language} />
@@ -111,7 +112,9 @@ export default function PatientProfile() {
             <InfoRow
               label="ความสัมพันธ์"
               value={patient.emergency_contact_rel}
+              
             />
+            <InfoRow label="เบอร์โทรศัพท์" value={patient.emergency_contact_phone} />
           </div>
         </div>
       </div>
