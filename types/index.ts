@@ -12,11 +12,11 @@ export interface Patient {
   address: string;
   pref_language?: string;
   nationality?: string;
-  emergency_contact_name?: string;
-  chronic_disease?: string; // โรคประจำตัว
-  allergies?: string; // อาการแพ้
-  emergency_contact_rel?: string;
   religion?: string;
+  emergency_contact_name?: string;
+  emergency_contact_rel?: string;
+  chronic_disease?: string; // โรคประจำตัว
+  allergies?: string;       // สิ่งที่แพ้
   status: PatientStatus;
   updated_at: string;
 }

@@ -3,21 +3,25 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Sidebar from "@/components/sidebar";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/utils/supabaseClient";
 
 export default function MainPage() {
   const { user, login } = useAuth();
   const router = useRouter();
 
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginStep, setLoginStep] = useState<"select_role" | "staff_auth">(
-    "select_role"
-  );
+  const [loginStep, setLoginStep] = useState<
+    "select_role" | "staff_auth" | "patient_auth"
+  >("select_role");
+
   const [staffId, setStaffId] = useState("");
   const [staffPass, setStaffPass] = useState("");
+
+  const [phoneInput, setPhoneInput] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (user === "patient") router.push("/dashboard/patient");
     if (user === "staff") router.push("/dashboard/staff");
   }, [user, router]);
 
@@ -25,8 +29,55 @@ export default function MainPage() {
     e.preventDefault();
     if (staffId.trim() !== "" && staffPass === "1234") {
       login("staff");
+      router.push("/dashboard/staff");
     } else {
       setErrorMsg("รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง");
+    }
+  };
+
+  const handlePatientLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (!phoneInput) return setErrorMsg("กรุณากรอกเบอร์โทรศัพท์");
+
+    setIsLoading(true);
+
+    const { data } = await supabase
+      .from("patients")
+      .select("id")
+      .eq("id", phoneInput.trim())
+      .single();
+
+    setIsLoading(false);
+
+    if (data) {
+      login("patient");
+      router.push(`/dashboard/patient?id=${phoneInput.trim()}`); 
+    } else {
+      setErrorMsg('ไม่พบประวัติของเบอร์นี้ กรุณากดปุ่ม "ลงทะเบียนใหม่"');
+    }
+  };
+
+  const handlePatientRegister = async () => {
+    setErrorMsg("");
+    if (!phoneInput) return setErrorMsg("กรุณากรอกเบอร์โทรศัพท์เพื่อลงทะเบียน");
+
+    setIsLoading(true);
+
+    const { data } = await supabase
+      .from("patients")
+      .select("id")
+      .eq("id", phoneInput.trim())
+      .single();
+
+    setIsLoading(false);
+
+    if (data) {
+      setErrorMsg('เบอร์นี้ลงทะเบียนไปแล้ว กรุณากดปุ่ม "เข้าสู่ระบบ"');
+    } else {
+      login("patient", phoneInput.trim());
+      router.push(`/dashboard/patient?id=${phoneInput.trim()}`);
     }
   };
 
@@ -35,6 +86,7 @@ export default function MainPage() {
     setLoginStep("select_role");
     setStaffId("");
     setStaffPass("");
+    setPhoneInput("");
     setErrorMsg("");
   };
 
@@ -80,6 +132,8 @@ export default function MainPage() {
                 <p className="text-blue-100 text-sm">
                   {loginStep === "select_role"
                     ? "เลือกบทบาทของคุณ"
+                    : loginStep === "patient_auth"
+                    ? "ยืนยันเบอร์โทรศัพท์"
                     : "ยืนยันตัวตนเจ้าหน้าที่"}
                 </p>
               </div>
@@ -95,7 +149,7 @@ export default function MainPage() {
               {loginStep === "select_role" && (
                 <div className="space-y-4">
                   <button
-                    onClick={() => login("patient")}
+                    onClick={() => setLoginStep("patient_auth")}
                     className="w-full flex items-center p-4 border rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all group shadow-sm"
                   >
                     <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform">
@@ -104,11 +158,10 @@ export default function MainPage() {
                     <div className="ml-4 text-left">
                       <h3 className="text-lg font-bold">ผู้ป่วย (Patient)</h3>
                       <p className="text-xs text-slate-500">
-                        ลงทะเบียนประวัติใหม่
+                        ลงทะเบียน หรือ แก้ไขข้อมูลเดิม
                       </p>
                     </div>
                   </button>
-
                   <button
                     onClick={() => setLoginStep("staff_auth")}
                     className="w-full flex items-center p-4 border rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all group shadow-sm"
@@ -123,6 +176,64 @@ export default function MainPage() {
                       </p>
                     </div>
                   </button>
+                </div>
+              )}
+
+              {loginStep === "patient_auth" && (
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <label className="block text-sm font-bold text-slate-700">
+                      เบอร์โทรศัพท์มือถือ
+                    </label>
+                    <input
+                      type="tel"
+                      className="w-full border border-slate-300 rounded-lg p-3 outline-none focus:ring-2 focus:ring-blue-500 text-lg tracking-wide"
+                      placeholder="08x-xxx-xxxx"
+                      value={phoneInput}
+                      onChange={(e) => setPhoneInput(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
+
+                  {errorMsg && (
+                    <p className="text-red-500 text-sm bg-red-50 p-2 rounded text-center animate-pulse">
+                      {errorMsg}
+                    </p>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={handlePatientLogin}
+                      disabled={isLoading}
+                      className="w-full py-3 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 rounded-lg font-bold shadow-sm disabled:opacity-50"
+                    >
+                      {isLoading ? "..." : "เข้าสู่ระบบ"}
+                    </button>
+
+                    <button
+                      onClick={handlePatientRegister}
+                      disabled={isLoading}
+                      className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md disabled:opacity-50"
+                    >
+                      {isLoading ? "..." : "ลงทะเบียนใหม่"}
+                    </button>
+                  </div>
+
+                  <div className="text-center">
+                    <p className="text-xs text-slate-400 mb-2">
+                      ใช้เบอร์โทรศัพท์เป็นรหัสประจำตัวผู้ป่วย (ID)
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginStep("select_role");
+                        setErrorMsg("");
+                      }}
+                      className="text-slate-400 hover:text-slate-600 text-sm font-bold underline"
+                    >
+                      ย้อนกลับ
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -152,13 +263,11 @@ export default function MainPage() {
                       onChange={(e) => setStaffPass(e.target.value)}
                     />
                   </div>
-
                   {errorMsg && (
-                    <p className="text-red-500 text-sm bg-red-50 p-2 rounded text-center animate-pulse">
+                    <p className="text-red-500 text-sm bg-red-50 p-2 rounded text-center">
                       {errorMsg}
                     </p>
                   )}
-
                   <div className="pt-2 flex gap-3">
                     <button
                       type="button"

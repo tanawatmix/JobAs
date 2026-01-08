@@ -1,69 +1,103 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
-import { savePatient } from "@/utils/mockDatabase";
+import { useSearchParams, useRouter } from "next/navigation";
+import { supabase } from "@/utils/supabaseClient";
 import { Patient, PatientStatus } from "@/types";
 
 export default function PatientPage() {
-  const [sessionId] = useState(
-    () => `p-${Math.floor(Math.random() * 1000000000)}`
-  );
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("id");
+  const action = searchParams.get("action");
   const [status, setStatus] = useState<PatientStatus>("inactive");
+  const [isLoading, setIsLoading] = useState(true);
 
   const {
     register,
     watch,
     handleSubmit,
+    reset,
+    setValue,
     formState: { errors },
   } = useForm<Patient>();
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (status === "submitted") return;
+    const fetchPatientData = async () => {
+      if (!sessionId) return;
+      setValue("phone", sessionId);
+
+      const { data } = await supabase
+        .from("patients")
+        .select("*")
+        .eq("id", sessionId)
+        .single();
+      if (data) {
+        reset(data as Patient);
+        if (action === "edit") {
+          setStatus("inactive");
+        } else {
+          setStatus(data.status as PatientStatus);
+        }
+      }
+      setIsLoading(false);
+    };
+    fetchPatientData();
+  }, [sessionId, reset, setValue, action]);
+
+  const updateToSupabase = async (
+    data: Partial<Patient>,
+    newStatus: PatientStatus
+  ) => {
+    if (!sessionId) return;
+
+    const payload = {
+      id: sessionId,
+      ...data,
+      phone: sessionId,
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+    };
+    await supabase.from("patients").upsert(payload);
+  };
+
+  useEffect(() => {
+    if (isLoading || status === "submitted" || !sessionId) return;
 
     const subscription = watch((value) => {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
       const currentStatus = "filling";
       setStatus(currentStatus);
-
-      savePatient({
-        id: sessionId,
-        ...value,
-        status: currentStatus,
-        updated_at: new Date().toISOString(),
-      } as Patient);
+      updateToSupabase(value as Partial<Patient>, currentStatus);
 
       typingTimeoutRef.current = setTimeout(() => {
         setStatus("inactive");
-        savePatient({
-          id: sessionId,
-          ...value,
-          status: "inactive",
-          updated_at: new Date().toISOString(),
-        } as Patient);
+        updateToSupabase(value as Partial<Patient>, "inactive");
       }, 3000);
     });
     return () => subscription.unsubscribe();
-  }, [watch, sessionId, status]);
+  }, [watch, sessionId, status, isLoading]);
 
-  const onSubmit = (data: Patient) => {
+  const onSubmit = async (data: Patient) => {
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
     setStatus("submitted");
-
-    savePatient({
-      ...data,
-      id: sessionId,
-      status: "submitted",
-      updated_at: new Date().toISOString(),
-    });
+    await updateToSupabase(data, "submitted");
   };
 
   const labelStyle =
     "block text-sm md:text-base font-medium text-slate-700 mb-1";
   const inputStyle =
-    "w-full border border-slate-300 rounded px-3 py-2 text-sm md:text-base text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500";
+    "w-full border border-slate-300 rounded px-3 py-2 text-sm md:text-base text-slate-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-500";
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-500">
+        กำลังโหลดข้อมูล...
+      </div>
+    );
+  }
 
   if (status === "submitted") {
     return (
@@ -75,34 +109,36 @@ export default function PatientPage() {
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
-              strokeWidth={2}
             >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                strokeWidth={2}
                 d="M5 13l4 4L19 7"
               />
             </svg>
           </div>
           <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2">
-            ส่งข้อมูลเรียบร้อย!
+            บันทึกข้อมูลสำเร็จ!
           </h2>
           <p className="text-slate-500 mb-6">
-            ขอบคุณสำหรับการลงทะเบียน
-            <br />
-            เจ้าหน้าที่ได้รับข้อมูลของท่านแล้ว
+            ข้อมูลของคุณถูกส่งเข้าระบบแล้ว <br />
           </p>
 
           <div className="bg-slate-50 rounded-lg p-3 mb-6 text-xs text-slate-400 font-mono">
-            Session ID: {sessionId}
+            Patient ID: {sessionId}
           </div>
 
-          <button
-            onClick={() => (window.location.href = "/")}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow transition-colors"
-          >
-            กลับสู่หน้าหลัก
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={() =>
+                router.push(`/dashboard/patient/profile?id=${sessionId}`)
+              }
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow transition-colors flex items-center justify-center gap-2"
+            >
+              <span>👤</span> ตรวจสอบข้อมูลส่วนตัว
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -118,7 +154,7 @@ export default function PatientPage() {
                 แบบฟอร์มลงทะเบียน
               </h1>
               <p className="text-blue-100 text-xs sm:text-sm mt-1">
-                Session ID: {sessionId}
+                Patient ID: {sessionId}
               </p>
             </div>
             <div className="bg-white/20 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border border-white/30 whitespace-nowrap">
@@ -131,6 +167,21 @@ export default function PatientPage() {
               onSubmit={handleSubmit(onSubmit)}
               className="space-y-4 sm:space-y-6"
             >
+              <div>
+                <label className={labelStyle}>
+                  เบอร์โทรศัพท์ <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register("phone", { required: true })}
+                  className={inputStyle}
+                  placeholder="08x-xxx-xxxx"
+                  readOnly
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  * เบอร์โทรศัพท์ใช้เป็นรหัสประจำตัว (ID) ไม่สามารถแก้ไขได้
+                </p>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                 <div>
                   <label className={labelStyle}>
@@ -158,12 +209,10 @@ export default function PatientPage() {
                   />
                 </div>
               </div>
-
               <div>
                 <label className={labelStyle}>ชื่อกลาง (ถ้ามี)</label>
                 <input {...register("middle_name")} className={inputStyle} />
               </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
                 <div>
                   <label className={labelStyle}>
@@ -184,9 +233,9 @@ export default function PatientPage() {
                     className={inputStyle}
                   >
                     <option value="">เลือกเพศ...</option>
-                    <option value="Male">ชาย</option>
-                    <option value="Female">หญิง</option>
-                    <option value="Other">อื่นๆ</option>
+                    <option value="ชาย">ชาย</option>
+                    <option value="หญิง">หญิง</option>
+                    <option value="อื่นๆ">อื่นๆ</option>
                   </select>
                 </div>
               </div>
@@ -204,11 +253,8 @@ export default function PatientPage() {
                       placeholder="เช่น ความดัน, เบาหวาน"
                     />
                   </div>
-
                   <div>
-                    <label className={labelStyle}>
-                      ประวัติการแพ้ (ยา/อาหาร/สารเคมี)
-                    </label>
+                    <label className={labelStyle}>ประวัติการแพ้</label>
                     <input
                       {...register("allergies")}
                       className={`${inputStyle} border-red-200 focus:border-red-500 focus:ring-red-200`}
@@ -216,17 +262,6 @@ export default function PatientPage() {
                     />
                   </div>
                 </div>
-              </div>
-
-              <div>
-                <label className={labelStyle}>
-                  เบอร์โทรศัพท์ <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register("phone", { required: true })}
-                  className={inputStyle}
-                  placeholder="08x-xxx-xxxx"
-                />
               </div>
 
               <div>
@@ -238,7 +273,6 @@ export default function PatientPage() {
                   placeholder="name@example.com"
                 />
               </div>
-
               <div>
                 <label className={labelStyle}>ที่อยู่</label>
                 <textarea
@@ -261,8 +295,19 @@ export default function PatientPage() {
                   <input {...register("nationality")} className={inputStyle} />
                 </div>
                 <div>
-                  <label className={labelStyle}>ศาสนา</label>
-                  <input {...register("religion")} className={inputStyle} />
+                  <label className={labelStyle}>
+                    ศาสนา <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    {...register("religion", { required: true })}
+                    className={inputStyle}
+                  >
+                    <option value="">เลือกศาสนา...</option>
+                    <option value="พุทธ">พุทธ</option>
+                    <option value="คริสต์">คริสต์</option>
+                    <option value="อิสลาม">อิสลาม</option>
+                    <option value="อื่นๆ">อื่นๆ</option>
+                  </select>
                 </div>
               </div>
 

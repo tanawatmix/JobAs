@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 interface SidebarProps {
   onLoginClick?: () => void;
@@ -11,65 +11,50 @@ interface SidebarProps {
 export default function Sidebar({ onLoginClick }: SidebarProps) {
   const { user, logout } = useAuth();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
 
-  const isActive = (path: string) => pathname.includes(path);
+  const patientId = searchParams.get("id");
 
-  const closeMenu = () => setIsOpen(false);
+  const isActive = (path: string) => pathname === path;
 
   return (
     <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className={`md:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md border border-slate-200 text-slate-600 hover:text-blue-600 transition-colors ${
-          isOpen ? "hidden" : ""
-        }`}
-        aria-label="Open menu"
-      >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="md:hidden fixed top-4 left-4 z-80  "
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
-      </button>
+          ☰
+        </button>
+      )}
 
       {isOpen && (
         <div
-          onClick={closeMenu}
+          onClick={() => setIsOpen(false)}
           className="fixed inset-0 bg-black/50 z-30 md:hidden animate-in fade-in"
-          role="presentation"
         />
       )}
 
       <aside
         className={`
-        fixed top-0 left-0 z-40 h-screen w-64 sm:w-56 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 ease-in-out
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} 
-        md:translate-x-0 md:relative
+        fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 ease-in-out font-sans
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 
       `}
       >
-        <div className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-slate-50 shrink-0">
-          <span className="text-blue-600 font-bold  truncate">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-50">
+          <span className="text-blue-600 font-bold text-xl">
             Agnos Hospital
           </span>
           <button
-            onClick={closeMenu}
-            className="md:hidden text-slate-400 hover:text-slate-600 transition-colors shrink-0 ml-2"
-            aria-label="Close menu"
+            onClick={() => setIsOpen(false)}
+            className="md:hidden text-slate-400 hover:text-slate-600 p-1"
           >
             ✕
           </button>
         </div>
 
-        <nav className="flex-1 p-3 sm:p-4 space-y-1 mt-2 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 mt-2 overflow-y-auto">
           <div className="text-xs font-bold text-slate-400 mb-3 px-2">
             เมนูหลัก
           </div>
@@ -78,38 +63,59 @@ export default function Sidebar({ onLoginClick }: SidebarProps) {
             <button
               onClick={() => {
                 onLoginClick?.();
-                closeMenu();
+                setIsOpen(false);
               }}
-              className="w-full text-left px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-sm font-medium border border-dashed border-slate-300 transition-colors"
+              className="w-full text-left px-3 py-2 text-slate-600 hover:bg-slate-50 rounded-lg text-sm font-medium border border-dashed border-slate-300"
             >
               🔐 เข้าสู่ระบบ
             </button>
           ) : (
             <>
               {user === "patient" && (
-                <Link
-                  href="/dashboard/patient"
-                  onClick={closeMenu}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive("/patient")
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  📝 ลงทะเบียน
-                </Link>
+                <>
+                  <Link
+                    href={
+                      patientId
+                        ? `/dashboard/patient?id=${patientId}`
+                        : "/dashboard/patient"
+                    }
+                    onClick={() => setIsOpen(false)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                      pathname === "/dashboard/patient"
+                        ? "bg-blue-50 text-blue-600"
+                        : "text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>📝</span> แบบฟอร์ม / แก้ไข
+                  </Link>
+
+                  {patientId && (
+                    <Link
+                      href={`/dashboard/patient/profile?id=${patientId}`}
+                      onClick={() => setIsOpen(false)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                        pathname === "/dashboard/patient/profile"
+                          ? "bg-blue-50 text-blue-600"
+                          : "text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span>👤</span> ข้อมูลส่วนตัว
+                    </Link>
+                  )}
+                </>
               )}
+
               {user === "staff" && (
                 <Link
                   href="/dashboard/staff"
-                  onClick={closeMenu}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive("/staff")
+                  onClick={() => setIsOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium ${
+                    isActive("/dashboard/staff")
                       ? "bg-blue-50 text-blue-600"
                       : "text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  🖥️ Dashboard
+                  <span>🖥️</span> Dashboard
                 </Link>
               )}
             </>
@@ -117,8 +123,8 @@ export default function Sidebar({ onLoginClick }: SidebarProps) {
         </nav>
 
         {user !== "guest" && (
-          <div className="p-3 sm:p-4 border-t border-slate-100 shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="p-4 border-t border-slate-100">
+            <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold shrink-0">
                 {user === "patient" ? "P" : "S"}
               </div>
@@ -133,8 +139,7 @@ export default function Sidebar({ onLoginClick }: SidebarProps) {
               </div>
               <button
                 onClick={logout}
-                className="text-xs text-red-500 hover:underline shrink-0 transition-colors"
-                aria-label="Logout"
+                className="text-xs text-red-500 hover:underline shrink-0"
               >
                 ออก
               </button>
