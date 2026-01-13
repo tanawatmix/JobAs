@@ -15,6 +15,11 @@ This project is a responsive, real-time patient registration system developed as
 
 git clone [https://github.com/tanawatmix/JobAs.git]
 ---------------------------------------------------------------------------------------
+staff test
+username : staff
+password : 1234
+
+---------------------------------------------------------------------------------------
 Database Setup
 
 CREATE TABLE patients (
